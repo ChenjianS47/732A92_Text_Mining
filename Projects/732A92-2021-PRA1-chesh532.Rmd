@@ -1,0 +1,98 @@
+---
+title: Text classification on comments of Genshin Impact via non-deep learning and deep learning models
+subtitle: "732A92 Text Mining"
+author: Chenjian Shi (chesh532)
+institution: Linkoping University
+date: "Jan 15,2022"
+abstract: This project deal with a text classification problem of comments on Genshin Impact through using non-deep learning and deep learning models, which includes the whole process of data from data accessing to results analysis.
+output: 
+  pdf_document: 
+    latex_engine: lualatex
+    toc: yes
+    number_sections: yes
+bibliography: Reference.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+Genshin Impact [@Genshin_impact] is an open-world ARPG developed by a Chinese company named Mihoyo. This game was recently awarded many international awards in the game fields, like The Game Award for Best Mobile Game, etc. [@TGA]
+
+In this case,  more and more people comment on this game on Twitter, Reddit, etc. But for now, it is hard to classify these comments manually since there are thousands of data. So, here the text classification could help us understand whether these comments belong to the categories, like Extremely Negative, Negative, Neutral, Positive, Extremely Positive.
+
+In this paper, I would use some typical methods/models below:
+
+Non-deep learning:
+  Linear Support Vector Classification
+  Logistic Regression
+  
+Deep learning:
+  Recurrent neural networks
+  Bidirectional Encoder Representations from Transformers
+  
+I would try to analyze the results and compare the performance of these methods/models based on the results, data quality, etc.
+
+# Data
+
+In this section, I would introduce how to get access to the data and the way I choose to do the pre-processing(data cleaning)
+
+## Data Access
+
+
+
+
+## Data Overview
+
+```{python echo=FALSE}
+# import numpy as np
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# import sklearn.model_selection
+# 
+# pd.set_option('display.max_columns', None)
+# pd.set_option('max_colwidth', 30)
+# data = pd.read_excel('data_38k_us.xlsx')
+# data
+```
+
+
+
+
+
+## Data Cleaning
+
+
+# Process
+
+
+## Non-Deep Learning
+
+### Data preprocessing
+
+### Linear Support Vector Classification
+
+### Logistic Regression
+
+
+## Deep Learning
+
+### Data Preprocessing
+
+
+### RNN
+
+
+### LSTM
+
+
+### BERT
+
+
+
+# Conclusion
+
+
+# Reference
