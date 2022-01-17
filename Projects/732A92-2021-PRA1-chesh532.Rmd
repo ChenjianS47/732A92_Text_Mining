@@ -7,15 +7,20 @@ date: "Jan 15,2022"
 abstract: This project deal with a text classification problem of comments on Genshin Impact through using non-deep learning and deep learning models, which includes the whole process of data from data accessing to results analysis.
 output: 
   pdf_document: 
-    latex_engine: lualatex
     toc: yes
     number_sections: yes
+    latex_engine: xelatex
 bibliography: Reference.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set( echo=FALSE)
+library(reticulate)
+Sys.setenv(RETICULATE_PYTHON = "E:\\Anaconda3\\envs\\tf")
+use_condaenv(condaenv = "tf")
 ```
+
+\newpage
 
 # Introduction
 
@@ -25,14 +30,14 @@ In this case,  more and more people comment on this game on Twitter, Reddit, etc
 
 In this paper, I would use some typical methods/models below:
 
-Non-deep learning:
-  Linear Support Vector Classification
-  Logistic Regression
+1. Non-deep learning:
+- Linear Support Vector Classification
+- Logistic Regression
   
-Deep learning:
-  Recurrent neural networks
-  Bidirectional Encoder Representations from Transformers
-  
+2. Deep learning:
+- Recurrent neural networks
+- Bidirectional Encoder Representations from Transformers
+
 I would try to analyze the results and compare the performance of these methods/models based on the results, data quality, etc.
 
 # Data
@@ -41,58 +46,363 @@ In this section, I would introduce how to get access to the data and the way I c
 
 ## Data Access
 
+The data was scraped from the reviews of Genshin Impact on Google play[@googleplay] on Jan 09th, 2022 by python script[./main.py], which is implemented from a package named google-play-scraper[@google-play-scraper]. The original data  is in the JSON form below:
 
+```{python echo=TRUE}
+# {
+#         "userName": "Alyssa Williams",
+#         "userImage": "https://lh3.googleusercontent.com/-cVEHKr7mzv8/AAAAAAAAA
+#                       AI/AAAAAAAAAAA/AKF05nB2r3GUkji31m0tC4ylFNiVMpmNWA/photo.
+#                       jpg",
+#         "content": "This is literally the best idle game I have ever played. T
+#                    he penguins waddle around and live their best lives in the 
+#                    cutest little outfits. I just unlocked the little penguins 
+#                    and I have been sobbing uncontrollably for ten minutes beca
+#                    use they are so adorable. There are only two suggestions I 
+#                    have for this game: more of the penguin info ads. I love th
+#                    em. I have learned so much about all the teeny fellas. Seco
+#                    ndly, I would like to be able to name my 'guins so I can te
+#                    ll them apart.",
+#         "score": 5,
+#         "thumbsUpCount": 54,
+#         "reviewCreatedVersion": "1.16",
+#         "at": datetime.datetime(2020, 2, 24, 17, 19, 34),
+#         "replyContent": "Hello, We will gradually improve the various systems 
+#                          in the game to enhance the player's game experience. 
+#                          We have recorded your suggestions and feedback to the
+#                          planner. If you have any other suggestions and ideas,
+#                          please feel free to contact us at penguinisle@habby.
+#                          com.Thank you for playing!",
+#         "repliedAt": datetime.datetime(2020, 2, 24, 18, 30, 42),
+#         "reviewId": "gp:AOqpTOE0Iy5S9Je1F8W1BgCl6l_TCFP_QN4qGtRATX3PeB5VV9aZu
+#                                            6UHfMWdYFF1at4qZ59xxLNHFqYLql5SL-k"
+# },
+```
+
+According to the requirements of these paper, I only choose the data of "at" and "score" and "content", which stand for the date, content, and the score of one review, and save them as Excel files, because contents include the symbol ','. Besides, the score range in the Google play store is from 1 to 5, which I think could be regarded as a different attitude to the things, like 1 (Extremely Negative), 2 (Negative), 3 (Neutral), 4 (Positive), 5 (Extremely Positive).
 
 
 ## Data Overview
 
 ```{python echo=FALSE}
-# import numpy as np
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# import sklearn.model_selection
-# 
-# pd.set_option('display.max_columns', None)
-# pd.set_option('max_colwidth', 30)
-# data = pd.read_excel('data_38k_us.xlsx')
-# data
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import sklearn.model_selection
+
+pd.set_option('display.max_columns', None)
+pd.set_option('max_colwidth', 30)
+data = pd.read_excel('data_38k_us.xlsx')
+data
 ```
 
+This data frame shows the shape of the original data with (38598 rows x 3 columns). Due to the limited resources of my computer or other cloud platforms like Colab, it is hard for me to use all these data this time since it takes me about 10 hours to clean 3000 records of data. So, I had to sample the data according to the original data's distribution with a ratio rate of 10%. The sampled data would be split into training and test sets. This data size for the training model may not be sufficient, which may lead to a low-performance model.
+
+Here I would use wordcloud[@oesper2011wordcloud] and matplotlib[@matplotlib] for data visualization.
+
+According to the figures below, the train data are both imbalanced, which is necessary to make it balanced before training, this would make bias to the results. And, the word cloud for the data, the word 'game' is the highest frequency word for all the labels.
+
+```{python echo=TRUE,include=FALSE}
+from sklearn.model_selection import train_test_split
+data_train,data_test = train_test_split(data, test_size=0.33, random_state=42)
+train = data_train.groupby('Score').apply(lambda x: x.sample(frac=0.1,random_state=2201))
+test = data_test.groupby('Score').apply(lambda x: x.sample(frac=0.1,random_state=2201))
+train = train.reset_index(drop=True)
+test = test.reset_index(drop=True)
+
+```
+
+```{python}
+def show_counts_per_class_of_labels(data):
+    plt.rcParams['figure.figsize'] = [5, 2.5]
+    plt.bar(range(1,6),(list(data['Score']).count(1),list(data['Score']).count(2),list(data['Score']).count(3),list(data['Score']).count(4),list(data['Score']).count(5)))
+    plt.show()
+    pass
+```
+
+\newpage
+
+```{python}
+print("The shape of train data is {} x {}".format(train.shape[0],train.shape[1]))
+print("The count per Class of labels")
+show_counts_per_class_of_labels(train)
+print("The wordclod per class of labels")
+```
+
+![The wordclod per class of labels for train data]("./train_word.png")
 
 
+```{python}
+print("The shape of test data is {} x {}".format(test.shape[0],test.shape[1]))
+print("The count per Class of labels")
+show_counts_per_class_of_labels(test)
+print("The wordclod per class of labels")
+```
+![The wordclod per class of labels for test data]("./test_word.png")
 
+
+\newpage
 
 ## Data Cleaning
 
+In practice, the most important and troubling part of deploying a machine learning model might be data cleaning. It is because when we are deploying a machine learning model, the choice of model and the parameter adjustment depends on the objective performance of the model, which usually has standards rules to follow. But the data we used in the model cannot be changed if the performance is not good, besides, if the data is of low quality, for example, the data size is too small or the label/features is not correctly written in the data sets, all these would lead to a bad performance of a model.
 
-# Process
-
-
-## Non-Deep Learning
-
-### Data preprocessing
-
-### Linear Support Vector Classification
-
-### Logistic Regression
+As for the data we use here, the content contains much informal spelling or abbreviation. Besides, even if we set the language to 'en', there may still contain non-English words or emojis. So to get a higher quality of data, we would use the way introduced below to do the data cleaning:
 
 
-## Deep Learning
 
-### Data Preprocessing
-
-
-### RNN
+a) Contextual Spell Check[@spell_check]
+This is a package from the spacy universe, which uses the BERT model to do the correction of the spelling of the words. It could be added to the spacy pipeline. Here the doc._.outcome_spellCheck would be used as the correct content after the process. Besides, it could be also used for language detection in a way.
 
 
-### LSTM
+b) remove_emoji[@remove_emoji]
+This function is used to remove the emoji, non-English characters, and other symbols.
+
+```{python eval=FALSE,echo=TRUE}
+# stackoverflow.com/questions/33404752/removing-emojis-from-a-string-in-python
+def remove_emoji(string):
+    emoji_pattern = re.compile("["
+                               u"\U0001F600-\U0001F64F"  # emoticons
+                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                               u"\U00002500-\U00002BEF"  # chinese char
+                               u"\U00002702-\U000027B0"
+                               u"\U00002702-\U000027B0"
+                               u"\U000024C2-\U0001F251"
+                               u"\U0001f926-\U0001f937"
+                               u"\U00010000-\U0010ffff"
+                               u"\u2640-\u2642"
+                               u"\u2600-\u2B55"
+                               u"\u200d"
+                               u"\u23cf"
+                               u"\u23e9"
+                               u"\u231a"
+                               u"\ufe0f"  # dingbats
+                               u"\u3030"
+                               "]+", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', string)
+```
+
+The cleaning work is implemented by using spacy[@Honnibal_spaCy_Industrial-strength_Natural_2020] pipeline.
 
 
-### BERT
+Since the processing time of this cleaning takes too much time (10 hours for 3000 records of data). I save the processed data into Excel files and use them for the later model deploying.
 
+```{python echo=TRUE,include=FALSE}
+# Use the filted data procceed before because of too long processing time
+# train_filt = spell_check_and_language_detect(train,train_filt)
+# test_filt = spell_check_and_language_detect(test,test_filt)
+# train_filt.to_excel('train_data.xlsx', index=False)
+# test_filt.to_excel('test_data.xlsx', index=False)
+train_filt=pd.read_excel('train_data.xlsx')
+test_filt=pd.read_excel('test_data.xlsx')
+```
+
+Like I introduced above, there maybe some data is not in english or not spell correctly, in this case, the return of the doc._.outcome_spellCheck would be null, which means some data contains the NA value in the data set. So we need to drop the NA value.
+
+```{python}
+train_filt_na = train_filt.dropna()
+train_filt_na = train_filt_na.reset_index(drop=True)
+test_filt_na = test_filt.dropna()
+test_filt_na = test_filt_na.reset_index(drop=True)
+```
+
+\newpage
+
+```{python}
+print("The shape of train data is {} x {}".format(train_filt_na.shape[0],train_filt_na.shape[1]))
+print("The count per Class of labels")
+show_counts_per_class_of_labels(train_filt_na)
+print("The wordclod per class of labels")
+```
+
+![The wordclod per class of labels for train data]("./train_filt_na.png")
+
+
+
+
+```{python}
+print("The shape of test data is {} x {}".format(test_filt_na.shape[0],test_filt_na.shape[1]))
+print("The count per Class of labels")
+show_counts_per_class_of_labels(test_filt_na)
+print("The wordclod per class of labels")
+```
+![The wordclod per class of labels for test data]("./test_filt_na.png")
+
+\newpage
+
+# Non-Deep Learning
+
+In this section, I would introduce preprocessing of the data (data balance and vectorizer) and the two classical non-deep learning models for text classification. For both the data vectorizer and the model training, I would use API from the scikit-learn[@scikit-learn][@sklearn_api]
+
+## Data preprocessing
+
+### Data balance
+According to the previous introduction, we need to balance the data to meet the requirement of the models, which requires the data has an equal number per class of labels. In this case, I would use the Synthetic Minority Over-sampling Technique (SMOTE)[@SMOTE], which may be the most popular oversampling method to do the data balancing. SMOTE could not only do over-sampling the minority class but also do the under-sampling of the majority class. The algorithm of SMOTE is processing as below, 
+
+For each sample $x$ in the minority class, use the Euclidean distance as the standard to calculate the distance from it to all samples in the minority class sample set $S$, and get its k nearest neighbors. 
+
+Then a sampling ratio is set according to the sample imbalance ratio for helping determine the sampling ratio N. For each minority class sample $x$, several samples are randomly selected from its k nearest neighbors, assuming that the selected nearest neighbor is $xn$.
+
+At last, for each randomly selected $xn$, then construct a new sample with the original sample according to the following formula:
+$x_{new}=x+rand(0,1)*|x-xn|$
+
+However, there would create bias on the data sets.
+
+### Vectorizer
+
+Vectorization is a process that translates the given text into numerical vectors, which transform the text feature into a way that the machine learning algorithms could understand and learn. In this paper, I would use the CountVectorizer, which not only implements tokenization but also the occurrence counting[@scikit-learn][@sklearn_api]. Besides, it also needs a long time for Vectorization, in this case, I also use the cache from the previous processing for time saving.
+
+## Linear Support Vector Classification
+
+### Theory
+
+Linear Support Vector Classification(LSVC) is a kind of supervised learning model and related learning algorithm for analyzing data in classification and regression analysis.[@cortes1995support] Here the LSVC implements “one-vs-the-rest” multi-class strategy, thus training n classes.[@scikit-learn][@sklearn_api]
+
+![Linear Support Vector Classification formula]("./LSVC-formula.png")
+
+\newpage
+
+### Result
+
+              precision    recall  f1-score   support
+
+           1       0.17      0.27      0.21        73
+           2       0.34      0.32      0.33       227
+           3       0.32      0.24      0.27       283
+           4       0.27      0.28      0.28       179
+           5       0.30      0.44      0.36        75
+
+    accuracy                           0.29       837
+    macro avg      0.28      0.31      0.29       837
+    weighted avg   0.30      0.29      0.29       837
+
+
+
+## Logistic Regression
+
+### Theory
+Logistic regression It is a generalized linear regression analysis model, which is often used in data mining, automatic disease diagnosis, economic forecasting and other fields.[@scikit-learn]
+
+![Logistic Regression formula]("./LR-formula.PNG")
+
+### Result
+              precision    recall  f1-score   support
+
+           1       0.13      0.19      0.15        73
+           2       0.36      0.33      0.35       227
+           3       0.35      0.29      0.32       283
+           4       0.30      0.30      0.30       179
+           5       0.34      0.45      0.39        75
+
+    accuracy                           0.31       837
+    macro_avg      0.29      0.31      0.30       837
+    weighted_avg   0.32      0.31      0.31       837
+
+## Summary
+
+According to the results above, we could find that the logistic regression has better performance than the LSVC does, however, the total accuracy for both models is not good enough. Although both of them are linear models, the LSVC has based on the calculation of the distance between the data, which means the normalization is important for it, but when we are doing the text classification, it is hard to do the normalization. As for logistic regression, it has no problem about it, so it performs better.
+
+# Deep Learning
+
+In this section, I would introduce preprocessing of the data (data balance and tokenizer) and the two classical deep learning models for text classification. 
+
+All the processes of the data pre-processing and model training would use the API from tensorflow[@tensorflow2015-whitepaper] and keras[@chollet2015keras] and scikit-learn[@scikit-learn][@sklearn_api]. Besides, due to the limitation of the computation resources, I would try to build the model as simple as possible but still have better performance than the models in the previous section.
+
+## Data Preprocessing
+
+### Data Balance
+For the deep learning model, especially the neural network, the data balancing is also an important task for having better performance. In this paper, I would like to use the most classical one, which is compute the class weight by using the function compute_class_weight[@scikit-learn] from scikit-learn. In this case, all the data would have a different initial weights for neural network.
+
+### Tokenizer
+Like the Vectorizer we did in the previous section, the neural network also cannot learn the data directly without any pre-processing. It is a method of transforming the given text into a small unit, which is named token. In this case, a token would be divided into three different types, which include word, character, and subword. This is important for neural network because the neural network need to use these tokens to get the marks of words and prepare the vocabulary for them. Besides, after the tokenizer, it is also important to make the length aligned for both training data and the test data.
+
+![Tokenizer Theory]("./tokenlize_theory.png")
+
+[@manning-publications-2018]
+
+
+## Recurrent neural networks
+
+### Theory
+Recurrent neural network (RNN) is a kind a neural networks that process sequential data.[@Goodfellow-et-al-2016] Technically,RNN is takes a loop for iterating over the state changing steps,the RNN use the same w in the same time for the whole training process,
+
+![RNN, unrolled view]("./RNN-theory.PNG")
+
+(Figure from 732A78 Deep Learning,Lecture 5,May 16,2021)
+
+The model used in the paper is build based on the torturial from the Tensorflow[@tensorflow2015-whitepaper] and keras[@chollet2015keras]
+
+https://www.tensorflow.org/text/tutorials/text_classification_rnn
+
+https://www.tensorflow.org/guide/keras/rnn
+
+
+### Result
+
+![Result for RNN]("./RNN.png")
+
+The accuracy of this simple RNN is about 0.311, which is not actually better than the performance of the model in the previous section.
+
+## Long Short-Term Memory
+
+### Theory
+
+The Long Short-Term Memory (LSTM) actually is a mutaion of the RNN, which was designed for solving the gradients problems.[@LSTM]
+
+![LSTM-theory]("./LSTM-theory.PNG")
+(Figure from 732A78 Deep Learning,Lecture 5,May 16,2021)
+
+![A look inside an LSTM cell]("./LSTM-inside.PNG")
+(Figure from 732A78 Deep Learning,Lecture 5,May 16,2021)
+
+
+### Result
+
+
+![Result for LSTM]("./LSTM.png")
+
+The accuracy of LSTM is about 0.311, which is not close to the RNNs'.
+\newpage
+
+## Bidirectional Encoder Representations from Transformers
+
+### Theory
+Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from an unlabeled text by jointly conditioning on both left and right context in all layers.[@devlin2019bert]
+
+![BERT-theory]("./BERT-theory.PNG")
+
+(Figure from [@vaswani2017attention])
+
+In this section, we use the BERT model which is pre-trained from Tensorflow[@turc2019][@tensorflow2015-whitepaper]
+
+\newpage
+
+### Result
+
+![Result for BERT]("./BERT.png")
+
+Although this BERT only trained with 10 epochs, which is less than the RNN's 20 epochs, the accuracy get huge improved compared with the previous RNN models, which increased from 0.311 to 0.415.
+
+## Summary
+
+By comparing these deep-learning models, it is obvious that the BERT achieved better performance than RNN. If we train the BERT model with more epochs, there will be further performance improvement.
 
 
 # Conclusion
 
+In general, the models previously mentioned do not perform well because of low accuracy, which means it is hard to do the job of comment sentiment analysis. I think the reason which leads to these results like below:
+
+- The data size is not large enough, which makes the data lack some features.
+
+- Lacking computation resources. Non-deep learning models may have the same performance compared with the simple deep learning models. But only if the computation resources are enough and the data size(feature) is large enough, the deep learning model could have better performance.
+
+By comparing to the official documents/tutorial in the Tensorflow[@tensorflow2015-whitepaper], which gets a high accuracy of about 0.85, there is also a important reason:
+
+- The data quality is not good enough, for example, the data is imbalanced in this paper and the content may still contain some non-English words which may lead to the low performance of data.
+
+
+\newpage
 
 # Reference
