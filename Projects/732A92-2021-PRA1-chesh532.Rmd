@@ -4,7 +4,7 @@ subtitle: "732A92 Text Mining"
 author: Chenjian Shi (chesh532)
 institution: Linkoping University
 date: "Mar 18,2022"
-abstract: Nowadays, video games are a vital part of the entertainment industry, and mobile games play an essential role. Recently, a mobile game named Genshin Impact gets more and more popular and has achieved many international awards. People talk about this game on Twitter and Reddit. We would like to do the sentiment analysis on the comments of Twitter and Reddit. However, we do not have labeled data of comments in Twitter and Reddit, so in this paper, we would like to use the reviews of Genshin Impact from the Google play store as data to build a sentiment classifier for classifying the comments on Twitter and Reddit. Finally, although the performance of all the models is not so well,  however, we found that the classifier based on the BERT has the best performance among them.
+abstract: Nowadays, video games are a vital part of the entertainment industry, and mobile games play an essential role. Recently, a mobile game named Genshin Impact gets more and more popular and has achieved many international awards. People talk about this game on Twitter and Reddit. Therefore, we want to do the sentiment analysis on the comments of Twitter and Reddit. However, we do not have labeled data of comments in Twitter and Reddit, so in this paper, we would like to use the reviews of Genshin Impact from the Google play store as data to build a sentiment classifier for classifying the comments on Twitter and Reddit. Finally,  we found that the classifier based on the BERT has the best performance among the models in this paper.
 output: 
   pdf_document: 
     toc: yes
